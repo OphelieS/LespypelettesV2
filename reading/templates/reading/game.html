@@ -1,0 +1,301 @@
+{% extends "reading/base.html" %}
+
+{% block content %}
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Emotion Detection</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.15.0/dist/tf.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+	<script async src="https://docs.opencv.org/master/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
+    <script>
+        function startVideo() {
+            const video = document.getElementById('video');
+            
+            if (navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(function (stream) {
+                        video.srcObject = stream;
+                    })
+                    .catch(function (error) {
+                        console.log('Something went wrong!', error);
+                    });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', startVideo);
+
+
+    const userStars = parseInt(document.getElementById('userStars').value, 10);
+    const userLevel = parseInt(document.getElementById('userLevel').value, 10);
+    const username = document.getElementById('username').value;
+    const video = document.getElementById('video');
+    const startButton = document.getElementById('start');
+    const stopButton = document.getElementById('stop');
+    const transcriptElement = document.getElementById('transcript');
+    const resultElement = document.getElementById('result');
+    
+    
+    
+    let audioTextElement = document.getElementById('audio-text');
+    
+    if (!audioTextElement) {
+      audioTextElement = document.createElement('p');
+      audioTextElement.id = 'audio-text';
+      document.body.appendChild(audioTextElement);
+      console.warn('L\'élément HTML avec l\'ID "audio-text" n\'existait pas et a été créé automatiquement.');
+    }
+    
+    
+    
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'fr-FR';
+    recognition.interimResults = true;
+    recognition.continuous = true;
+    
+    
+        
+    
+    
+    
+    recognition.onresult = function(event) {
+      let finalTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript;
+        } else {
+          transcriptElement.textContent = finalTranscript + transcript;
+        }
+      }
+    
+      if (finalTranscript.trim().toLowerCase() === audioTextElement.textContent.toLowerCase()) {
+        resultElement.innerHTML = '<span>Bravo, tu as gagné une étoile !</span> ⭐';
+    
+        recognition.stop();
+        startButton.disabled = true;
+        stopButton.disabled = true;
+    
+        // Ajouter le code pour enregistrer l'étoile gagnée dans la base de données ici
+        const newStars = userStars + 1;
+        const updateStarsForm = document.getElementById('updateStarsForm');
+        const newStarsInput = document.getElementById('newStars');
+    
+        newStarsInput.value = newStars;
+        updateStarsForm.submit(); // Soumettre le formulaire
+    }
+    };
+    
+    
+    recognition.onerror = function(event) {
+      console.error(event);
+    };
+    
+    recognition.onend = function() {
+      startButton.disabled = false;
+      stopButton.disabled = true;
+    };
+    
+    startButton.addEventListener('click', () => {
+      recognition.start();
+      startButton.disabled = true;
+      stopButton.disabled = false;
+      resultElement.innerHTML = '';
+    });
+    
+    stopButton.addEventListener('click', () => {
+      recognition.stop();
+      startButton.disabled = false;
+      stopButton.disabled = true;
+    });
+
+
+
+    
+
+
+
+  function getEmotion() {
+    $.ajax({
+      url: "{% url 'reading:detect_emotion' %}",
+      type: "POST",
+      dataType: "json",
+      success: function(response) {
+        console.log(response.emotion); // Affiche l'émotion détectée dans la console
+        // Vous pouvez utiliser 'response.emotion' pour mettre à jour votre interface utilisateur, par exemple :
+        $('#emotion-display').text("Emotion: " + response.emotion);
+      },
+      error: function(err) {
+        console.error("Erreur lors de la récupération de l'émotion", err);
+      }
+    });
+  }
+
+  // Appeler la fonction getEmotion périodiquement, par exemple toutes les 5 secondes :
+  setInterval(getEmotion, 5000);
+
+
+  
+    
+    
+      /////// CHANGER LE MOT
+    async function changeWord() {
+      try {
+        const response = await fetch('{% url "reading:get_random_word" %}');
+        if (response.ok) {
+          const data = await response.json();
+          audioTextElement.textContent = data.chosen_word;
+        } else {
+          console.error('Erreur lors de la récupération du mot aléatoire.');
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération du mot aléatoire :', error);
+      }
+    }
+    
+    // Ajouter un gestionnaire d'événements pour le bouton "changer-mot" en dehors de la fonction changeWord().
+    const changeWordButton = document.getElementById('changer-mot');
+    changeWordButton.addEventListener('click', changeWord);
+    
+    
+    </script>
+
+</head>
+<body>
+
+	<div>
+		
+		<canvas id="canvasOutput" width="640" height="480"></canvas>
+		<p id="emotionPrediction"></p>
+    
+	</div>
+
+
+
+<h1>Level {{ user.level }}</h1>
+<h2>tu as {{user.stars}} ⭐</h2>
+<p>{{user.username}}, lis le son:</p>
+<p id="audio-text">{{ chosen_word }}</p>
+<button id="start">Démarrer la transcription</button>
+<button id="stop" disabled>Arrêter la transcription</button>
+<p id="transcript"></p>
+<div id="result"></div>
+<button id="changer-mot" type="button">Changer de mot</button>
+<video id="video" width="640" height="480" autoplay></video>
+<button onclick="detectEmotion()">Détecter l'émotion</button>
+
+<div id="predictions"></div>
+<div id="emotion-predictions"></div>
+<form id="updateStarsForm" action="{% url 'reading:update_stars' %}" method="post">
+  {% csrf_token %}
+  <input type="hidden" name="new_stars" id="newStars" value="">
+</form>
+<!-- pour accéder de manière cachée aux informations -->
+<input type="hidden" id="userStars" value="{{ user.stars }}">
+<input type="hidden" id="userLevel" value="{{ user.level }}">
+<input type="hidden" id="username" value="{{ user.username }}">
+</body>
+
+
+{% endblock %}
+
+
+
+
+
+<!-- // ///////////// DETECTION EMOTION
+// // Définir des variables pour les éléments HTML de la page
+// const videoElement = document.getElementById('video');
+// const videoContainer = document.getElementById('video-container');
+// const emotionPredictionsElement = document.getElementById('emotion-predictions');
+
+// // Charger le modèle Keras pour la détection d'émotions
+// tf.loadLayersModel('/reading/model.json').then(model => {
+//   // Définir la fonction pour dessiner le canvas avec la vidéo
+//   function onOpenCvReady() {
+//     // Définir la taille du canvas
+//     const canvasOutput = document.getElementById('canvasOutput');
+//     canvasOutput.width = videoElement.width;
+//     canvasOutput.height = videoElement.height;
+//   // Démarer la capture vidéo
+//   const videoCap = new cv.VideoCapture(video);
+//   const capFrame = () => {
+//     // Lire la prochaine frame de la vidéo
+//     videoCap.read(frame => {
+//       // Dessiner la frame sur le canvas
+//       cv.imshow('canvasOutput', frame);
+
+//       // Prétraiter la frame pour la détection d'émotions
+//       const gray = new cv.Mat();
+//       cv.cvtColor(frame, gray, cv.COLOR_RGBA2GRAY);
+//       cv.resize(gray, gray, new cv.Size(48, 48), 0, 0, cv.INTER_AREA);
+//       const input = cv.matFromArray(1, gray.rows * gray.cols, cv.CV_32FC1, gray.data);
+
+//       // Faire une prédiction d'émotion avec le modèle Keras
+//       const output = model.predict(input).dataSync();
+//       const maxIndex = output.indexOf(Math.max(...output));
+//       const emotionLabels = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral'];
+//       const emotionPrediction = emotionLabels[maxIndex];
+
+//       // Afficher la prédiction d'émotion sur la page
+//       emotionPredictionsElement.innerHTML = `<p>Dernière prédiction : ${emotionPrediction}</p>`;
+    
+//       // Passer à la prochaine frame de la vidéo
+//       setTimeout(capFrame, 1000 / 30);
+//     });
+//   };
+
+//   // Démarrer la capture vidéo après un bref délai
+//   setTimeout(() => {
+//     videoContainer.style.display = 'block';
+//     capFrame();
+//   }, 500);
+// }});
+
+
+
+
+// // Définir la liste des prédictions d'émotions
+// const predictions = [];
+
+// // Démarrer la capture vidéo avec la webcam de l'utilisateur
+// navigator.mediaDevices.getUserMedia({ video: true })
+//   .then(stream => {
+//     // Afficher la vidéo dans l'élément <video>
+//     videoElement.srcObject = stream;
+//     videoElement.play();
+//     // Appeler la fonction pour dessiner le canvas avec la vidéo
+//     cv.onRuntimeInitialized = onOpenCvReady;
+//   })
+//   .catch(err => {
+//     console.error('Erreur lors de la capture vidéo :', err);
+//   });
+
+
+//   function detectEmotion() {
+//   $.ajax({
+//     url: '/detect_emotion/',
+//     success: function(data) {
+//       // Afficher les résultats de la détection d'émotion sur la page
+//       $('#emotion-predictions').text('Dernière prédiction : ' + data.emotion);
+//     },
+//     error: function() {
+//       console.error('Erreur lors de la récupération des résultats de la détection d\'émotion.');
+//     }
+//   });
+// }
+
+
+
+ -->
+
+
+
+
+
+
+
+
+

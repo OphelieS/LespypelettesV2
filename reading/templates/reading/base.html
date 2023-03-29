@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}{% endblock %}</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <meta name="description" content="">
+    <style>
+      body {
+    background-image: linear-gradient(135deg, #35CDCE 10%, #2e50c7 100%);
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    font-family: "Open Sans", sans-serif;
+    color: #333333;
+  }
+  
+  
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="{% url 'reading:index' %}">Accueil</a></li>
+                <li><a href="{% url 'reading:signup' %}">Inscription</a></li>
+                {% if user.is_authenticated %}
+                <li><a href="{% url 'reading:logout' %}">Déconnexion</a></li>
+                {% else %}
+                <li><a href="{% url 'reading:login_view' %}">Connexion</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </header>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    <footer>
+        <p>&copy; Fait avec amour et patience </p>
+    </footer>
+</body>
+</html>
