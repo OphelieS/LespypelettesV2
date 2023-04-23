@@ -1,0 +1,574 @@
+{% extends "reading/base.html" %}
+
+{% block content %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Emotion Detection</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.15.0/dist/tf.min.js"></script>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+<input type="hidden" id="userStars" value="{{ user.stars }}">
+<input type="hidden" id="userLevel" value="{{ user.level }}">
+<input type="hidden" id="username" value="{{ user.username }}">
+<input type="hidden" id="newLevel" value="{{ newLevel }}">
+<input type="hidden" id="newStars" value="{{ newStars }}">
+
+
+<form method="post" action="{% url 'reading:game' %}">
+    {% csrf_token %}
+</form>
+
+
+<span id="stars-display"></span>
+<span id="level-display"></span> 
+<button id="continue-playing-button" style="display:none;">Continuer à jouer</button>
+
+
+<div>
+    
+    <p id="emotionPrediction"></p>
+
+<h1>Level {{ user.level }}</h1>
+<h2>tu as {{user.stars}} ⭐</h2>
+<p>{{user.username}}, lis le son:</p>
+<p id="audio-text">{{ chosen_word }}</p><br>
+<p id="transcript">{{ transcript }}</p><br>
+
+<p id="result"></p>
+
+<button id="start" class="round-button green">Démarrer</button>
+<button id="stop" class="round-button red" disabled>Pause</button>
+
+
+
+<button id="changer-mot" type="button" class="round-button yellow">Changer de mot</button><button id="next-word-button" class="round-button orange" style="display: none;">Mot suivant</button>
+<br>
+<div id="change-word-section" style="display: none;">
+  <audio controls>
+    <source src="/static/voicebooking-speech.wav" type="audio/wav">
+  </audio>
+  
+  <p>Le son lu ne correspond pas au son à lire et l'émotion la plus présente est négative. Vous pouvez changer de mot en appuyant sur le bouton jaune !</p>
+</div>
+<video id="video" width="640" height="480" autoplay></video>
+<div id="predictions"></div>
+<div id="emotion-predictions"></div>
+<form id="updateStarsForm" action="{% url 'reading:update_stars' %}" method="post">
+{% csrf_token %}
+<input type="hidden" name="new_stars" id="newStars" value="">
+</form>
+
+<div id="videosythesia" style="position: relative; overflow: hidden; padding-top: 56.25%; margin-top : 20px"><iframe src="https://share.synthesia.io/embeds/videos/938b5642-d87a-4c2e-9fca-843358db18ad" loading="lazy" title="Synthesia video player - Your AI video" allow="encrypted-media; fullscreen;" style="position: absolute; width: 35%; height: 35%; top: 0; left: 0; border: none; padding: 0; margin: 0; overflow:hidden;"></iframe></div>
+
+<style>
+  .button-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  position: absolute;
+  bottom: 10%;
+}
+videosythesia{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+h1{
+  font-size:25px
+}
+
+p.audio-text{
+  font-size: 20px;
+ 
+}
+    video {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        width: 240px;
+        height: 180px;
+        border-radius: 70%;
+        overflow: hidden;
+        
+    }
+    #changer-mot {
+        display: inline-block;
+    }
+
+    .round-button {
+  border: none;
+  color: rgb(16, 4, 248);
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  border-radius: 100%;
+  
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.green {
+  background-color: #1a921e;
+  padding: 50px 25px;
+}
+
+.red {
+  background-color: #f44336;
+  padding: 50px 40px;
+}
+
+.yellow {
+  background-color:  #f2cf05;
+  padding: 50px 3px;
+  /* color: black; */
+}
+
+.orange {
+  background-color: #ff9800;
+  padding: 50px 20px;
+}
+
+.round-button:hover {
+  opacity: 0.8;
+}
+</style>
+<script>
+
+
+
+    function startVideo() {
+        const video = document.getElementById('video');
+
+        if (navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function (stream) {
+                    video.srcObject = stream;
+                })
+                .catch(function (error) {
+                    console.log('Something went wrong!', error);
+                });
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', startVideo);
+
+    const video = document.getElementById('video');
+    const startButton = document.getElementById('start');
+    const stopButton = document.getElementById('stop');
+    const transcriptElement = document.getElementById('transcript');
+    const resultElement = document.getElementById('result');
+    const userStars = parseInt(document.getElementById('userStars').value);
+    const userLevel = parseInt(document.getElementById('userLevel').value);
+    const username = document.getElementById('username').value;
+const audioTextElement = document.getElementById('audio-text');
+const nextWordButton = document.getElementById('next-word-button');
+
+//const detectEmotionButton = document.querySelector('button[onclick="detectEmotion()"]');
+const changeWordButton = document.getElementById('changer-mot');
+const detectedEmotions = [];
+console.log(userStars);
+    
+console.log(userLevel);
+    
+console.log(username);
+let timerId;
+let emotionTimeout = 30000; // 30 secondes
+
+function startTimer() {
+    timerId = setTimeout(() => {
+      console.log('starttimer')
+        recognition.stop();
+        const finalTranscript = transcriptElement.textContent.trim().toLowerCase();
+        const audioText = audioTextElement.textContent.toLowerCase();
+        const allowedEmotions = ['en colère', 'dégoût', 'peur', 'triste','neutre'];
+        if (finalTranscript !== audioText && allowedEmotions.includes(mostCommonEmotion)) {
+            const changeWordSection = document.getElementById('change-word-section');
+            changeWordSection.style.display = 'block';
+        }
+    }, emotionTimeout);
+}
+
+function resetTimer() {
+    clearTimeout(timerId);
+    startTimer();
+}
+    
+const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+recognition.lang = 'fr-FR';
+recognition.interimResults = true;
+recognition.continuous = true;
+
+
+
+        // Initialiser la détection d'émotion
+        let mostCommonEmotion = '';
+
+        async function detectEmotion() {
+  try {
+    // Capturer l'image de la webcam
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = canvas.toDataURL('image/jpeg', 0.8);
+
+    // Envoyer l'image au serveur pour la détection d'émotion
+    const response = await fetch('{% url "reading:detect_emotion" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+      },
+      body: `image=${encodeURIComponent(imageData)}`,
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log('Résultats de la détection d\'émotion :', data);
+      const emotionPredictionElement = document.getElementById('emotionPrediction');
+      emotionPredictionElement.textContent = 'Emotion détectée : ' + data.emotion;
+
+      // Ajouter l'émotion détectée à la liste
+      detectedEmotions.push(data.emotion);
+      //detectedEmotions = detectedEmotions.filter(emotion => emotion !== null);
+
+
+      // Trouver l'émotion la plus présente dans la liste
+      mostCommonEmotion = findMostCommonEmotion(detectedEmotions);
+
+      // Afficher la liste des émotions détectées et l'émotion la plus présente dans la console
+
+      console.log('Liste des émotions détectées :', detectedEmotions);
+      console.log('Émotion la plus présente :', mostCommonEmotion);
+    } else {
+      console.error('Erreur lors de la détection d\'émotion :', response.status, response.statusText);
+    }
+  } catch (error) {
+    console.error('Erreur lors de la détection d\'émotion :', error);
+  }
+}
+setInterval(detectEmotion, 4000);
+// Fonction pour trouver l'émotion la plus présente dans une liste d'émotions
+function findMostCommonEmotion(emotions) {
+  const emotionCounts = emotions.reduce((acc, emotion) => {
+    if (!acc[emotion]) {
+      acc[emotion] = 0;
+    }
+    acc[emotion]++;
+    return acc;
+  }, {});
+
+  let mostCommonEmotion = null;
+  let maxCount = 0;
+  for (const [emotion, count] of Object.entries(emotionCounts)) {
+    if (count > maxCount) {
+      mostCommonEmotion = emotion;
+      maxCount = count;
+    }
+  }
+
+  return mostCommonEmotion;
+}
+
+
+
+
+
+
+
+
+
+
+    recognition.onstart = function () {
+        resetTimer();
+    };
+
+    recognition.onresult = function (event) {
+    resetTimer();
+    let finalTranscript = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+            finalTranscript += transcript;
+            
+            const expectedText = audioTextElement.textContent.toLowerCase();
+            const repeatedText = expectedText + ' ' + expectedText;
+
+            const userStarsElement = document.getElementById('userStars');
+            const userStars = parseInt(userStarsElement.value);
+
+            if (finalTranscript.trim().toLowerCase() === expectedText || finalTranscript.trim().toLowerCase() === repeatedText || finalTranscript.trim().toLowerCase().includes(expectedText)) {
+                
+
+                console.log('Condition satisfaite, le message devrait s\'afficher', transcript);
+                
+
+                resultElement.textContent = 'Bravo, tu as gagné une étoile ! ⭐';
+
+                recognition.stop();
+                startButton.disabled = true;
+                stopButton.disabled = true;
+
+                const newStars = userStars + 1;
+                const userLevelElement = document.getElementById('userLevel');
+                const userLevel = parseInt(userLevelElement.value);
+                const newLevel = userStars >= 9  ? userLevel + 1 : userLevel;
+                
+                const newStarsInput = document.getElementById('newStars');
+                newStarsInput.value = newStars;
+
+                // Mettre à jour l'affichage des étoiles et du niveau sur la page
+                userLevelElement.value = newLevel;
+                userStarsElement.value = newStars;
+                document.querySelector('h1').textContent = 'Level ' + userLevelElement.value;
+                document.querySelector('h2').textContent = 'tu as ' + userStarsElement.value + ' ⭐';
+
+                // Afficher le bouton "Mot suivant"
+                document.getElementById('next-word-button').style.display = 'block';
+
+                // soumission du formulaire avec les nouvelles étoiles
+                console.log('Submitting form with new stars:', newStars);
+                const updateStarsForm = document.getElementById('updateStarsForm');
+
+                console.log("New stars value:", newStars);
+                newStarsInput.value = newStars;
+
+                fetch('{% url "reading:update_stars" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    },
+                    body: new URLSearchParams({
+                        new_stars: newStars,
+                        new_level: newLevel,
+                    }),
+                })
+                .then(response => {
+                    if (response.ok) {
+                        console.log('Étoiles et niveau mis à jour avec succès', newStars);
+                    } else {
+                        console.log('Erreur lors de la mise à jour des étoiles et du niveau 1');
+                    }
+                })
+                .catch(error => {
+                    console.log('Erreur lors de la mise à jour des étoiles et du niveau 2', error);
+                });
+            }
+        } else {
+        transcriptElement.textContent = finalTranscript + transcript;
+      
+      }
+    }
+};
+
+
+
+
+    recognition.onerror = function (event) {
+        console.error(event);
+    };
+
+    recognition.onend = function () {
+        startButton.disabled = false;
+        stopButton.disabled = true;
+    };
+
+
+        // Déclaration des variables globales
+        // let newStars = userStars;
+        // let newLevel = userLevel;
+// Remplacez l'événement "click" du startButton par le code ci-dessous
+startButton.addEventListener('click', () => {
+    console.log('Bouton start cliqué');
+    recognition.start();
+    startButton.disabled = true;
+    stopButton.disabled = false;
+    resultElement.innerHTML = '';
+
+    // Ajouter la détection d'émotion ici
+    startTimer();
+});
+
+
+    stopButton.addEventListener('click', () => {
+        console.log('Bouton stop cliqué');
+        recognition.stop();
+        startButton.disabled = false;
+        stopButton.disabled = true;
+        clearTimeout(timerId);
+        
+    });
+
+
+
+
+    changeWordButton.addEventListener('click', () => {
+      console.log('Bouton changer-mot cliqué');
+  location.reload();
+});
+
+
+function updateStarsAndLevel(newStars, newLevel) {
+    // Stocker les valeurs mises à jour dans le localStorage
+    localStorage.setItem('updatedStars', newStars);
+    console.log('UpdatedStars', newStars);
+    localStorage.setItem('updatedLevel', newLevel);
+}
+
+
+const updateStarsAndLevelOnServer = async (stars, level) => {
+  try {
+    const response = await fetch('/reading/update_stars/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+      body: JSON.stringify({ stars, level }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.status === 'success') {
+        console.log('Mise à jour réussie');
+      } else {
+        console.log('Erreur lors de la mise à jour:', data.message);
+      }
+    } else {
+      console.log('Erreur de réseau:', response.status);
+    }
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour:', error);
+  }
+};
+
+
+nextWordButton.addEventListener('click', () => {
+    const userStars = document.getElementById('newStars');
+    const userLevel = document.getElementById('newLevel');
+    console.log('bouton mextword cliqué', userStars.value, userLevel.value)
+    updateStarsAndLevel(newStars.value, newLevel.value);
+    //location.href = 'game.html';
+
+
+ // Mettre à jour les éléments d'affichage avec les valeurs stockées dans le localStorage
+ document.getElementById('stars-display').textContent = localStorage.getItem('updatedStars') || userStars.value;
+ document.getElementById('level-display').textContent = localStorage.getItem('updatedLevel') || userLevel.value;
+
+ 
+ getNewWord();
+ location.reload();
+ 
+
+ });
+
+ function onSuccess(response) {
+  if (response.ok) {
+    const newStars = response.newStars;
+    const newLevel = response.newLevel;
+
+    // Mettre à jour les étoiles et le niveau sur la page
+    document.getElementById('userStars').value = newStars;
+    document.getElementById('userLevel').value = newLevel;
+
+    // Afficher le bouton "Continuer à jouer"
+    document.getElementById('continue-playing-button').style.display = 'block';
+
+    // Ajouter un écouteur d'événement au bouton "Continuer à jouer"
+    document.getElementById('continue-playing-button').addEventListener('click', function() {
+      updateStarsAndLevel(newStars, newLevel);
+      getNewWord();
+    });
+  }
+}
+
+
+function saveStarsToDatabase(userId, updatedStars, updatedLevel) {
+    // Remplacez cette URL par l'URL de l'API Django que vous avez créée
+    const apiUrl = '/update-user-stars/';
+
+    fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({
+            userId: userId,
+            stars: updatedStars,
+            level: updatedLevel,
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Success:', data);
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+
+
+
+function getNewWord() {
+    
+  // Faire une requête AJAX pour récupérer un nouveau mot
+  $.ajax({
+    url: '{% url "reading:get_new_word" %}',
+    type: 'GET',
+    dataType: 'json',
+    success: function(response) {
+      // Charger le nouveau mot dans le jeu
+      // Charger le nouveau mot dans le jeu
+document.getElementById('audio-text').textContent = response.new_word;
+
+    },
+    error: function(error) {
+      console.error('Erreur lors de la récupération du nouveau mot:', error);
+    }
+  });
+}
+
+
+
+
+
+
+</script>
+
+       
+
+
+
+</body>
+
+
+{% endblock %}
+
+
+

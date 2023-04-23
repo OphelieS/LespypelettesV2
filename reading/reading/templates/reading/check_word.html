@@ -1,0 +1,22 @@
+{% extends "reading/base.html" %}
+
+{% block content %}
+  
+  <h1>Level {{ user.level }}</h1>
+  <p>{{ user.username }}, lis le son:</p>
+  <p>{{ current_word }}</p>
+  {% if correct %}
+    <div id="result"><span>Bravo, tu as gagné une étoile !</span> ⭐</div>
+  {% else %}
+    <div id="result"><span>Essaie encore...</span></div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="current_word" value="{{ current_word }}">
+    <label for="submitted_word">Transcription:</label>
+    <input type="text" name="submitted_word" id="submitted_word">
+    <button type="submit">Soumettre</button>
+  </form>
+
+{% endblock %}

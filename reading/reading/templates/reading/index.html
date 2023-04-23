@@ -1,0 +1,304 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <meta name="description" content="">
+  <style>
+	body {
+  background-image: linear-gradient(135deg, #35CDCE 10%, #2e50c7 100%);
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  font-family: "Open Sans", sans-serif;
+  color: #333333;
+}
+
+.box-form {
+  margin: 0 auto;
+  width: 80%;
+  background:#2e50c7;
+  border-radius: 10px;
+  overflow: hidden;
+  /* display: flex;
+  flex: 1 1 100%; */
+  align-items: stretch;
+  justify-content: space-between;
+  box-shadow: 0 0 20px 6px #090b6f85;
+}
+@media (max-width: 980px) {
+  .box-form {
+    /* flex-flow: wrap; */
+    text-align: center;
+    align-content: center;
+    align-items: center;
+  }
+}
+.box-form div {
+  height: auto;
+}
+.box-form .left {
+  color: #FFFFFF;
+  background-size: cover;
+  background-repeat: no-repeat;
+  
+  overflow: hidden;
+}
+.box-form .left .overlay {
+  padding: 30px;
+  width: 100%;
+  height: 100%;
+  background: #2e50c7;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.box-form .left .overlay h1 {
+  font-size: 8vmax;
+  line-height: 1;
+  font-weight: 900;
+  margin-top: 40px;
+  margin-bottom: 20px;
+}
+.box-form .left .overlay span p {
+  margin-top: 30px;
+  font-weight: 900;
+}
+.box-form .left .overlay span a {
+  background:  #1dcaff;
+  color: #FFFFFF;
+  margin-top: 10px;
+  padding: 14px 50px;
+  border-radius: 100px;
+  display: inline-block;
+  box-shadow: 0 3px 6px 1px #2b2e6c;
+}
+.box-form .left .overlay span a:last-child {
+  background: #1dcaff;
+  margin-left: 30px;
+}
+.box-form .right {
+  padding: 40px;
+  overflow: hidden;
+}
+@media (max-width: 980px) {
+  .box-form .right {
+    width: 100%;
+  }
+}
+.box-form .right h5 {
+  font-size: 4vmax;
+  margin: auto;
+  color : #f7f7fa;
+  
+}
+.box-form .right p {
+  font-size: 14px;
+  color: #B0B3B9;
+}
+/* .box-form .right .inputs {
+  overflow: hidden;
+} */
+.box-form .right input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 25px;
+  font-size: 16px;
+  border: none;
+  outline: none;
+  border-bottom: 2px solid #B0B3B9;
+}
+.box-form .right .remember-me--forget-password {
+  /* display: flex; */
+  justify-content: space-between;
+  align-items: center;
+}
+.box-form .right .remember-me--forget-password input {
+  margin: 0;
+  margin-right: 7px;
+  width: auto;
+}
+.box-form .right button {
+  
+  color: #fff;
+  font-size: 16px;
+  padding: 12px 35px;
+  border-radius: 50px;
+  display: inline-block;
+  border: 0;
+  outline: 0;
+  box-shadow: 0px 4px 20px 0px #2b2e6c;
+  background-image: linear-gradient(135deg, #2b2e6c 10%, #2b2e6c 100%);
+}
+
+label {
+  display: block;
+  position: relative;
+  margin-left: 30px;
+}
+
+label::before {
+  content: ' \f00c';
+  position: absolute;
+  font-family: FontAwesome;
+  background: transparent;
+  border: 3px solid #2b2e6c;
+  border-radius: 4px;
+  color: transparent;
+  left: -30px;
+  transition: all 0.2s linear;
+}
+
+label:hover::before {
+  font-family: FontAwesome;
+  content: ' \f00c';
+  color: #fff;
+  cursor: pointer;
+  background: #2b2e6c;
+}
+
+label:hover::before .text-checkbox {
+  background: #2b2e6c;
+}
+
+label span.text-checkbox {
+  display: inline-block;
+  height: auto;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s linear;
+}
+
+label input[type="checkbox"] {
+  display: none;
+}
+.background-video .background-video{
+	border-radius:20px;
+}
+#video-welcome{
+	border-radius:160px;
+	width: 50%;
+	float :right; 
+	margin-right: 10%;
+	margin-top: 10%;
+}
+#by{
+	color : white;
+	font-size : 1,5vmax;
+	text-align: center;
+	font-family:Verdana, Geneva, Tahoma, sans-serif;
+
+}
+a:-webkit-any-link {
+    color: #FFFFFF;
+}
+
+#social {
+  background: #1dcaff;
+  margin-left: 30px;
+  list-style-type: disc;
+}
+
+a.btn.btn-dark {
+  background: #1dcaff
+}
+
+   /* Nouveaux styles */
+   .content-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: stretch;
+    }
+
+    .left-side,
+    .right-side {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+    }
+
+    .left-side {
+      padding-top: 20px;
+    }
+
+    .right-side {
+      padding-top: 40px;
+    }
+
+    .left-side video,
+    .right-side video {
+      width: 100%;
+      max-width: 600px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+    }
+
+    .left-side h2 {
+      font-size: 2rem;
+      font-weight: bold;
+      text-align: center;
+      color: #ffffff;
+      margin-bottom: 20px;
+    }
+
+    a.btn.btn-dark{
+      background: #f2cf05 ;
+      color: #3b5998;
+      margin-top: 10px;
+      padding: 14px 50px;
+      border-radius: 100px;
+      display: inline-block;
+      box-shadow: 0 3px 6px 1px #2b2e6c;
+    }
+
+    /* Fin des nouveaux styles */
+  </style>
+  <title>Les pyplelettes</title>
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+<!-- <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous"> -->
+
+</head>
+
+  <body>
+    
+    <div class="box-form">
+      <div class="left">
+        <div class="overlay">
+          <div class="content-container">
+            <div class="left-side">
+              <video id="background-video" autoplay loop muted>
+                <source src="/static/Lespypelettes.mp4" type="video/mp4">
+              </video>
+
+              <h2>Apprendre la lecture et s'améliorer en s'amusant !</h2>
+              {% extends 'account/base.html' %}
+              {% block content %}
+              <div class="remember-me--forget-password"><p>Mot de passe oublié ?</p></div>
+            </div>
+            <div class="right-side">
+              <h2><p>Bonjour {{ user.username }} !  <br> Tu as {{ user.stars }} étoiles dans le niveau {{user.level}}.</p></h2>
+              <a class="btn btn-dark" href="{% url 'reading:game' %}">Je joue</a>
+              <br>
+              
+              <div class="background-video">
+                <div style="position: relative; overflow: hidden; padding-top: 56.25%;"><iframe src="https://share.synthesia.io/embeds/videos/ef4a6d29-5db6-492c-bb92-0f4c948d4aa7" loading="lazy" title="Synthesia video player - Your AI video" allow="encrypted-media; fullscreen;" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none; padding: 0; margin: 0; overflow:hidden;"></iframe></div>
+                <video id="video-welcome" autoplay loop muted>
+                <source src="/static/welcome.mp4" type="video/mp4">
+                </video>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endblock %}
+    <footer>
+      <div id="by">
+        <Socreadigit>&copy; Fait avec &hearts; par <a href="https://www.socreadigit.com" target="_blank">Socreadigit</a> 2023</p>
+      </div>
+    </footer>
+  </body>
+</html>

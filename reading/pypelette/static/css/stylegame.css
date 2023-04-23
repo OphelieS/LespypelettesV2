@@ -1,0 +1,7 @@
+.video-element {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 320px;
+    height: 240px;
+}
